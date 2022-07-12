@@ -10,6 +10,16 @@ import Crypto.Cipher.AES as AES
 import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
+def sendMessage(message):
+    for clientThread in clientsList:
+        en = AES.new(clientThread.key_128,AES.MODE_CFB)
+        eMsg = en.encrypt(message)
+        data = {"msg": eMsg.decode("latin-1"), "iv": en.iv.decode("latin-1")}
+        if eMsg:
+            print ("ENCRYPTED MESSAGE TO CLIENT-> "+str(eMsg))
+            print ("IV TO CLIENT-> "+str(en.iv))
+        clientThread.socketClient.sendall(json.dumps(data).encode())
+
 def recvData(socketClient, en_digest, key_128):
     while True:
         #message from client
@@ -27,32 +37,13 @@ def recvData(socketClient, en_digest, key_128):
         en = AES.new(key_128,AES.MODE_CFB,iv)
         dMsg = en.decrypt(newmess)
         print ("\n**New Message**  "+time.ctime(time.time()) +" > "+str(dMsg)+"\n")
-
-def sendData(socketClient, key_128):
-    while True:
-        mess = input("\nMessage To Client -> ")
-        if mess != "":
-            #eMsg = eMsg.encode("hex").upper()
-            en = AES.new(key_128,AES.MODE_CFB)
-            # eMsg = en.encrypt(mess.encode())
-            # if eMsg != "":
-            #     print ("ENCRYPTED MESSAGE TO CLIENT-> " + str(eMsg))
-            # client.sendall(eMsg)
-            eMsg = en.encrypt(mess.encode())
-            data = {"msg": eMsg.decode("latin-1"), "iv": en.iv.decode("latin-1")}
-            #converting the encrypted message to HEXADECIMAL to readable
-            #eMsg = eMsg.encode("hex").upper()
-            if eMsg:
-                print ("ENCRYPTED MESSAGE TO CLIENT-> "+str(eMsg))
-                print ("IV TO CLIENT-> "+str(en.iv))
-            socketClient.sendall(json.dumps(data).encode())
-
+        sendMessage(dMsg)
 class ClientThread(threading.Thread):
-    def __init__(self, clientId, socketClientAddress, socketClient):
+    def __init__(self, socketClientAddress, socketClient):
         threading.Thread.__init__(self)
-        self.id = clientId
         self.address = socketClientAddress
         self.socketClient = socketClient
+        self.key_128 = ""
         print ("Nova conexão criada com: ", self.address)
     
 
@@ -79,28 +70,29 @@ class ClientThread(threading.Thread):
             print ("\n-----HASH OF PUBLIC KEY----- \n"+gethash)
         if hex_digest == gethash:
             # creating session key
-            key_128 = os.urandom(16)
+            self.key_128 = os.urandom(16)
             #encrypt CTR MODE session key
-            en = AES.new(key_128,AES.MODE_CFB)
-            encrypto = en.encrypt(key_128)
+            en = AES.new(self.key_128,AES.MODE_CFB)
+            encrypto = en.encrypt(self.key_128)
             #hashing sha1
             en_object = hashlib.sha1(encrypto)
             en_digest = en_object.hexdigest()
 
-            print ("\n-----SESSION KEY-----\n"+str(key_128))
+            print ("\n-----SESSION KEY-----\n"+str(self.key_128))
 
             #encrypting session key and public key
-            E = key_cipher.encrypt(key_128)
+            E = key_cipher.encrypt(self.key_128)
             print ("\n-----ENCRYPTED PUBLIC KEY AND SESSION KEY-----\n"+str(E))
             print ("\n-----HANDSHAKE COMPLETE-----")
             self.socketClient.sendall(E)
             while True:
-                thread_send = threading.Thread(target=sendData,args=(self. socketClient, key_128))
-                thread_recv = threading.Thread(target=recvData,args=(self.socketClient, en_digest, key_128))
-                thread_send.start()
+                #thread_send = threading.Thread(target=sendData,args=(self. socketClient, self.key_128))
+                print("aqui")
+                thread_recv = threading.Thread(target=recvData,args=(self.socketClient, en_digest, self.key_128))
+                #thread_send.start()
                 thread_recv.start()
-                thread_send.join()
-                thread_recv.join()
+                #thread_send.join()
+                #thread_recv.join()
             self.socketClient.close()
         else:
             print ("\n-----PUBLIC KEY HASH DOESNOT MATCH-----\n")
@@ -137,11 +129,11 @@ if check is True: #Verificar
     # server Quit
     shutdown = False
 
-cont = 0
+clientsList = []
 while True:
     print("Esperando clientes...")
     server.listen(5)
     socket_client, socket_client_address = server.accept()
-    new_thread = ClientThread(cont, socket_client_address, socket_client)
-    new_thread.start()
-    cont += 1
+    new_client_thread = ClientThread(socket_client_address, socket_client)
+    new_client_thread.start()
+    clientsList.append(new_client_thread)
