@@ -35,7 +35,7 @@ class ClientThread(threading.Thread):
 
         if getpbk != "":
             print (getpbk)
-            self.socketClient.send("YES".encode())
+            self.socketClient.sendall("YES".encode())
             gethash = self.socketClient.recv(1024)
             gethash = gethash.decode()
             print ("\n-----HASH OF PUBLIC KEY----- \n"+gethash)
@@ -54,9 +54,8 @@ class ClientThread(threading.Thread):
             #encrypting session key and public key
             E = key_cipher.encrypt(key_128)
             print ("\n-----ENCRYPTED PUBLIC KEY AND SESSION KEY-----\n"+str(E))
-            
             print ("\n-----HANDSHAKE COMPLETE-----")
-            self.socketClient.send(E)
+            self.socketClient.sendall(E)
             while True:
                 #message from client
                 data_str = self.socketClient.recv(1024)
@@ -80,7 +79,7 @@ class ClientThread(threading.Thread):
                     # eMsg = en.encrypt(mess.encode())
                     # if eMsg != "":
                     #     print ("ENCRYPTED MESSAGE TO CLIENT-> " + str(eMsg))
-                    # client.send(eMsg)
+                    # client.sendall(eMsg)
                     eMsg = en.encrypt(mess.encode())
                     data = {"msg": eMsg.decode("latin-1"), "iv": en.iv.decode("latin-1")}
                     #converting the encrypted message to HEXADECIMAL to readable
@@ -88,7 +87,7 @@ class ClientThread(threading.Thread):
                     if eMsg:
                         print ("ENCRYPTED MESSAGE TO CLIENT-> "+str(eMsg))
                         print ("IV TO CLIENT-> "+str(en.iv))
-                    self.socketClient.send(json.dumps(data).encode())
+                    self.socketClient.sendall(json.dumps(data).encode())
             self.socketClient.close()
         else:
             print ("\n-----PUBLIC KEY HASH DOESNOT MATCH-----\n")
@@ -116,7 +115,6 @@ try:
     server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     server.bind((HOST,PORT))
     print("Servidor rodando...")
-    print("Esperando clientes...")
     check = True
 except BaseException:
     print ("Falha: verifique endereço e porta utilizados.")
@@ -128,6 +126,7 @@ if check is True: #Verificar
 
 cont = 0
 while True:
+    print("Esperando clientes...")
     server.listen(5)
     socket_client, socket_client_address = server.accept()
     new_thread = ClientThread(cont, socket_client_address, socket_client)

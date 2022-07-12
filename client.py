@@ -61,7 +61,7 @@ def send(t,name,key):
     if eMsg:
         print ("ENCRYPTED MESSAGE TO SERVER-> "+str(eMsg))
         print ("IV TO SERVER-> "+str(en_send.iv))
-    server.send(json.dumps(data).encode())
+    server.sendall(json.dumps(data).encode())
     
 def recv(t,key):
     data_str = server.recv(1024)
@@ -78,12 +78,12 @@ def recv(t,key):
     print ("\n**New Message From Server**  " + time.ctime(time.time()) + " : " + str(dMsg) + "\n")
 
 while True:
-    server.send(public)
+    server.sendall(public)
     confirm = server.recv(1024)
     confirm = confirm.decode()
     if confirm == "YES":
         print(f"Confirmação do servidor: {hex_digest}")
-        server.send(hex_digest.encode())
+        server.sendall(hex_digest.encode())
     else:
         break
 
@@ -112,7 +112,7 @@ while True:
 
         thread_send.join()
         thread_recv.join()
-        time.sleep(0.5)
-    time.sleep(60)
+        #time.sleep(0.5)
+    #time.sleep(60)
     server.close()
 server.close()
