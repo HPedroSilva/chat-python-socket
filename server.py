@@ -10,6 +10,43 @@ import Crypto.Cipher.AES as AES
 import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
+def recvData(socketClient, en_digest, key_128):
+    while True:
+        #message from client
+        data_str = socketClient.recv(1024)
+        data = json.loads(data_str.decode())
+        newmess = data["msg"].encode("latin-1")
+        iv = data["iv"].encode("latin-1")
+        #decoding the message from HEXADECIMAL to decrypt the ecrypted version of the message only
+        #decoded = newmess.decode("hex")
+        #making en_digest(session_key) as the key
+        key = en_digest[:16]
+        print ("\nENCRYPTED MESSAGE FROM CLIENT -> "+str(newmess))
+        print ("\nIV FROM CLIENT -> "+str(iv))
+        #decrypting message from the client
+        en = AES.new(key_128,AES.MODE_CFB,iv)
+        dMsg = en.decrypt(newmess)
+        print ("\n**New Message**  "+time.ctime(time.time()) +" > "+str(dMsg)+"\n")
+
+def sendData(socketClient, key_128):
+    while True:
+        mess = input("\nMessage To Client -> ")
+        if mess != "":
+            #eMsg = eMsg.encode("hex").upper()
+            en = AES.new(key_128,AES.MODE_CFB)
+            # eMsg = en.encrypt(mess.encode())
+            # if eMsg != "":
+            #     print ("ENCRYPTED MESSAGE TO CLIENT-> " + str(eMsg))
+            # client.sendall(eMsg)
+            eMsg = en.encrypt(mess.encode())
+            data = {"msg": eMsg.decode("latin-1"), "iv": en.iv.decode("latin-1")}
+            #converting the encrypted message to HEXADECIMAL to readable
+            #eMsg = eMsg.encode("hex").upper()
+            if eMsg:
+                print ("ENCRYPTED MESSAGE TO CLIENT-> "+str(eMsg))
+                print ("IV TO CLIENT-> "+str(en.iv))
+            socketClient.sendall(json.dumps(data).encode())
+
 class ClientThread(threading.Thread):
     def __init__(self, clientId, socketClientAddress, socketClient):
         threading.Thread.__init__(self)
@@ -18,6 +55,7 @@ class ClientThread(threading.Thread):
         self.socketClient = socketClient
         print ("Nova conexão criada com: ", self.address)
     
+
     def run(self):
         print ("CLIENT IS CONNECTED. CLIENT'S ADDRESS ->", self.address)
         print ("\n-----WAITING FOR PUBLIC KEY & PUBLIC KEY HASH-----\n")
@@ -57,37 +95,12 @@ class ClientThread(threading.Thread):
             print ("\n-----HANDSHAKE COMPLETE-----")
             self.socketClient.sendall(E)
             while True:
-                #message from client
-                data_str = self.socketClient.recv(1024)
-                data = json.loads(data_str.decode())
-                newmess = data["msg"].encode("latin-1")
-                iv = data["iv"].encode("latin-1")
-                #decoding the message from HEXADECIMAL to decrypt the ecrypted version of the message only
-                #decoded = newmess.decode("hex")
-                #making en_digest(session_key) as the key
-                key = en_digest[:16]
-                print ("\nENCRYPTED MESSAGE FROM CLIENT -> "+str(newmess))
-                print ("\nIV FROM CLIENT -> "+str(iv))
-                #decrypting message from the client
-                en = AES.new(key_128,AES.MODE_CFB,iv)
-                dMsg = en.decrypt(newmess)
-                print ("\n**New Message**  "+time.ctime(time.time()) +" > "+str(dMsg)+"\n")
-                mess = input("\nMessage To Client -> ")
-                if mess != "":
-                    #eMsg = eMsg.encode("hex").upper()
-                    en = AES.new(key_128,AES.MODE_CFB)
-                    # eMsg = en.encrypt(mess.encode())
-                    # if eMsg != "":
-                    #     print ("ENCRYPTED MESSAGE TO CLIENT-> " + str(eMsg))
-                    # client.sendall(eMsg)
-                    eMsg = en.encrypt(mess.encode())
-                    data = {"msg": eMsg.decode("latin-1"), "iv": en.iv.decode("latin-1")}
-                    #converting the encrypted message to HEXADECIMAL to readable
-                    #eMsg = eMsg.encode("hex").upper()
-                    if eMsg:
-                        print ("ENCRYPTED MESSAGE TO CLIENT-> "+str(eMsg))
-                        print ("IV TO CLIENT-> "+str(en.iv))
-                    self.socketClient.sendall(json.dumps(data).encode())
+                thread_send = threading.Thread(target=sendData,args=(self. socketClient, key_128))
+                thread_recv = threading.Thread(target=recvData,args=(self.socketClient, en_digest, key_128))
+                thread_send.start()
+                thread_recv.start()
+                thread_send.join()
+                thread_recv.join()
             self.socketClient.close()
         else:
             print ("\n-----PUBLIC KEY HASH DOESNOT MATCH-----\n")
