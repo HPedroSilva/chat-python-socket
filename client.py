@@ -55,35 +55,36 @@ class Client:
             print ("\n-----DECRYPTED SESSION KEY-----")
             print (decrypt)
             print ("\n-----HANDSHAKE COMPLETE-----\n")
-            alias = input("\nYour Name -> ")
+            alias = "Client"
 
-            thread_send = threading.Thread(target=self.send,args=(alias,))
+            #thread_send = threading.Thread(target=self.send,args=(alias,))
             thread_recv = threading.Thread(target=self.recv)
-            thread_send.start()
+            #thread_send.start()
             thread_recv.start()
             root = tk.Tk()
-            self.clientInterface = Interface(root)
+            self.clientInterface = Interface(self, root)
             root.mainloop()
-            thread_send.join()
+            #thread_send.join()
             thread_recv.join()
 
             self.server.close()
     
-    def send(self, name):
-        while True:
-            mess = input(name + " : ")
+    def send(self, msg):
+        #while True:
+         #   mess = input(name + " : ")
             #key = key[:16]
             #merging the message and the name
-            whole = name+" : "+mess
-            en_send = AES.new(self.key,AES.MODE_CFB)
-            eMsg = en_send.encrypt(whole.encode())
-            data = {"msg": eMsg.decode("latin-1"), "iv": en_send.iv.decode("latin-1")}
-            #converting the encrypted message to HEXADECIMAL to readable
-            #eMsg = eMsg.encode("hex").upper()
-            if eMsg:
-                print ("ENCRYPTED MESSAGE TO SERVER-> "+str(eMsg))
-                print ("IV TO SERVER-> "+str(en_send.iv))
-            self.server.sendall(json.dumps(data).encode())
+        #whole = name+" : "+mess
+        whole = msg
+        en_send = AES.new(self.key,AES.MODE_CFB)
+        eMsg = en_send.encrypt(whole.encode())
+        data = {"msg": eMsg.decode("latin-1"), "iv": en_send.iv.decode("latin-1")}
+        #converting the encrypted message to HEXADECIMAL to readable
+        #eMsg = eMsg.encode("hex").upper()
+        if eMsg:
+            print ("ENCRYPTED MESSAGE TO SERVER-> "+str(eMsg))
+            print ("IV TO SERVER-> "+str(en_send.iv))
+        self.server.sendall(json.dumps(data).encode())
 
     def recv(self):
         while True:
@@ -99,6 +100,7 @@ class Client:
             en_recv = AES.new(self.key,AES.MODE_CFB,iv)
             dMsg = en_recv.decrypt(newmess)
             comp_dMsg = "**New Message From Server**  " + time.ctime(time.time()) + " : " + str(dMsg)
+            #breakpoint()
             self.clientInterface.recvMsg(comp_dMsg)
             print("\n" + comp_dMsg + "\n")
 

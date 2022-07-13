@@ -1,6 +1,7 @@
 import tkinter as tk
 class Interface():
-    def __init__(self, master=None):
+    def __init__(self, client, master=None):
+        self.client = client
         self.fontePadrao = ("Arial", "10")
         self.primeiroContainer = tk.Frame(master)
         self.primeiroContainer["pady"] = 10
@@ -64,7 +65,7 @@ class Interface():
     def sendMsg(self):
         msg = self.msg.get()
         self.msg.delete(0, tk.END)
-        print(msg)
+        self.client.send(msg)
     # #Método verificar senha
     # def verificaSenha(self):
     #     usuario = self.nome.get()
