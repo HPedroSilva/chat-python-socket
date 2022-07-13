@@ -45,6 +45,7 @@ class Client:
             msg = self.server.recv(1024)
             en = msg
             decrypt = key_cipher.decrypt(en)
+            self.key = decrypt
             # hashing sha1
             en_object = hashlib.sha1(decrypt)
             en_digest = en_object.hexdigest()
@@ -56,8 +57,8 @@ class Client:
             print ("\n-----HANDSHAKE COMPLETE-----\n")
             alias = input("\nYour Name -> ")
 
-            thread_send = threading.Thread(target=self.send,args=(alias,decrypt))
-            thread_recv = threading.Thread(target=self.recv,args=(decrypt,))
+            thread_send = threading.Thread(target=self.send,args=(alias,))
+            thread_recv = threading.Thread(target=self.recv)
             thread_send.start()
             thread_recv.start()
             root = tk.Tk()
@@ -68,13 +69,13 @@ class Client:
 
             self.server.close()
     
-    def send(self, name, key):
+    def send(self, name):
         while True:
             mess = input(name + " : ")
             #key = key[:16]
             #merging the message and the name
             whole = name+" : "+mess
-            en_send = AES.new(key,AES.MODE_CFB)
+            en_send = AES.new(self.key,AES.MODE_CFB)
             eMsg = en_send.encrypt(whole.encode())
             data = {"msg": eMsg.decode("latin-1"), "iv": en_send.iv.decode("latin-1")}
             #converting the encrypted message to HEXADECIMAL to readable
@@ -84,7 +85,7 @@ class Client:
                 print ("IV TO SERVER-> "+str(en_send.iv))
             self.server.sendall(json.dumps(data).encode())
 
-    def recv(self, key):
+    def recv(self):
         while True:
             data_str = self.server.recv(1024)
             data = json.loads(data_str.decode())
@@ -95,7 +96,7 @@ class Client:
             print ("\nIV FROM SERVER -> "+str(iv))
             #key = key[:16]
             #decoded = newmess.decode("hex")
-            en_recv = AES.new(key,AES.MODE_CFB,iv)
+            en_recv = AES.new(self.key,AES.MODE_CFB,iv)
             dMsg = en_recv.decrypt(newmess)
             comp_dMsg = "**New Message From Server**  " + time.ctime(time.time()) + " : " + str(dMsg)
             self.clientInterface.recvMsg(comp_dMsg)
