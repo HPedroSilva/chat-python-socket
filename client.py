@@ -12,16 +12,6 @@ import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from client_interface import Interface
 
-#animating loading
-done = False
-def animate():
-    for c in itertools.cycle(['....','.......','..........','............']):
-        if done:
-            break
-        sys.stdout.write('\rCONFIRMING CONNECTION TO SERVER '+c)
-        sys.stdout.flush()
-        time.sleep(0.1)
-
 #public key and private key
 random_generator = Random.new().read
 key = RSA.generate(1024,random_generator)
@@ -43,14 +33,10 @@ host = "127.0.0.1"
 port = 80
 #binding the address and port
 server.connect((host, port))
-# printing "Server Started Message"
-thread_load = threading.Thread(target=animate)
-thread_load.start()
 
-time.sleep(4)
 done = True
 
-def send(t,name,key):
+def send(name,key):
     while True:
         mess = input(name + " : ")
         #key = key[:16]
@@ -66,7 +52,7 @@ def send(t,name,key):
             print ("IV TO SERVER-> "+str(en_send.iv))
         server.sendall(json.dumps(data).encode())
     
-def recv(t,key):
+def recv(key):
     while True:
         data_str = server.recv(1024)
         data = json.loads(data_str.decode())
@@ -104,10 +90,10 @@ if confirm == "YES":
     print ("\n-----DECRYPTED SESSION KEY-----")
     print (decrypt)
     print ("\n-----HANDSHAKE COMPLETE-----\n")
-    alais = input("\nYour Name -> ")
+    alias = input("\nYour Name -> ")
 
-    thread_send = threading.Thread(target=send,args=("------Sending Message------",alais,decrypt))
-    thread_recv = threading.Thread(target=recv,args=("------Recieving Message------",decrypt))
+    thread_send = threading.Thread(target=send,args=(alias,decrypt))
+    thread_recv = threading.Thread(target=recv,args=(decrypt,))
     thread_send.start()
     thread_recv.start()
     root = tk.Tk()
