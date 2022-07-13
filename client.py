@@ -16,7 +16,7 @@ class Client:
     def __init__(self):
         # Geração das chaves RSA
         random_generator = Random.new().read
-        rsaKey = RSA.generate(1024,random_generator)
+        rsaKey = RSA.generate(1024, random_generator)
         publicKey = rsaKey.publickey().exportKey()
         privateKey = rsaKey.exportKey()
 

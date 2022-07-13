@@ -1,141 +1,122 @@
 import socket
 import hashlib
 import os
-import time
-import itertools
 import threading
-import sys
 import json
 import Crypto.Cipher.AES as AES
 import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
-
-class ClientThread(threading.Thread):
-    def __init__(self, socketClientAddress, socketClient):
-        threading.Thread.__init__(self)
-        self.address = socketClientAddress
-        self.socketClient = socketClient
-        self.key_128 = ""
-        print ("Nova conexão criada com: ", self.address)
-    
-
-
-
-    def sendMessage(self, message):
-        for clientThread in clientsList:
-            en = AES.new(clientThread.key_128,AES.MODE_CFB)
-            eMsg = en.encrypt(message)
-            data = {"msg": eMsg.decode("latin-1"), "iv": en.iv.decode("latin-1")}
-            if eMsg:
-                print ("ENCRYPTED MESSAGE TO CLIENT-> "+str(eMsg))
-                print ("IV TO CLIENT-> "+str(en.iv))
-            clientThread.socketClient.sendall(json.dumps(data).encode())
-
-    def recvData(self, socketClient, en_digest, key_128):
-        while True:
-            #message from client
-            data_str = socketClient.recv(1024)
-            data = json.loads(data_str.decode())
-            newmess = data["msg"].encode("latin-1")
-            iv = data["iv"].encode("latin-1")
-            #decoding the message from HEXADECIMAL to decrypt the ecrypted version of the message only
-            #decoded = newmess.decode("hex")
-            #making en_digest(session_key) as the key
-            key = en_digest[:16]
-            print ("\nENCRYPTED MESSAGE FROM CLIENT -> "+str(newmess))
-            print ("\nIV FROM CLIENT -> "+str(iv))
-            #decrypting message from the client
-            en = AES.new(key_128,AES.MODE_CFB,iv)
-            dMsg = en.decrypt(newmess)
-            print ("\n**New Message**  "+time.ctime(time.time()) +" > "+str(dMsg)+"\n")
-            self.sendMessage(dMsg)
-
-    def run(self):
-        print ("CLIENT IS CONNECTED. CLIENT'S ADDRESS ->", self.address)
-        print ("\n-----WAITING FOR PUBLIC KEY & PUBLIC KEY HASH-----\n")
-        
-        #client's message(Public Key)
-        getpbk = self.socketClient.recv(2048)
-
-        #conversion of string to KEY
-        server_public_key = RSA.importKey(getpbk)
-        key_cipher =  PKCS1_OAEP.new(server_public_key)
-
-        #hashing the public key in server side for validating the hash from client
-        hash_object = hashlib.sha1(getpbk)
-        hex_digest = hash_object.hexdigest()
-
-        if getpbk != "":
-            print (getpbk)
-            self.socketClient.sendall("YES".encode())
-            gethash = self.socketClient.recv(1024)
-            gethash = gethash.decode()
-            print ("\n-----HASH OF PUBLIC KEY----- \n"+gethash)
-        if hex_digest == gethash:
-            # creating session key
-            self.key_128 = os.urandom(16)
-            #encrypt CTR MODE session key
-            en = AES.new(self.key_128,AES.MODE_CFB)
-            encrypto = en.encrypt(self.key_128)
-            #hashing sha1
-            en_object = hashlib.sha1(encrypto)
-            en_digest = en_object.hexdigest()
-
-            print ("\n-----SESSION KEY-----\n"+str(self.key_128))
-
-            #encrypting session key and public key
-            E = key_cipher.encrypt(self.key_128)
-            print ("\n-----ENCRYPTED PUBLIC KEY AND SESSION KEY-----\n"+str(E))
-            print ("\n-----HANDSHAKE COMPLETE-----")
-            self.socketClient.sendall(E)
-            while True:
-                #thread_send = threading.Thread(target=sendData,args=(self. socketClient, self.key_128))
-                print("aqui")
-                thread_recv = threading.Thread(target=self.recvData,args=(self.socketClient, en_digest, self.key_128))
-                #thread_send.start()
-                thread_recv.start()
-                #thread_send.join()
-                thread_recv.join()
-            self.socketClient.close()
-        else:
-            print ("\n-----PUBLIC KEY HASH DOESNOT MATCH-----\n")
-#server address and port number input from admin
-# host= input("Server Address - > ")
-# port = int(input("Port - > "))
 HOST = "127.0.0.1"
 PORT = 80
-#boolean for checking server and PORT
-check = False
-done = False
 
-# def animate():
-#     for c in itertools.cycle(['....','.......','..........','............']):
-#         if done:
-#             break
-#         sys.stdout.write('\rCHECKING IP ADDRESS AND NOT USED PORT '+c)
-#         sys.stdout.flush()
-#         time.sleep(0.1)
-#     sys.stdout.write('\r -----SERVER STARTED. WAITING FOR CLIENT-----\n')
-try:
-    #setting up socket
-    server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    server.bind((HOST,PORT))
-    print("Servidor rodando...")
-    check = True
-except BaseException:
-    print ("Falha: verifique endereço e porta utilizados.")
-    check = False
+class Server():
+    def __init__(self):
+        try:
+            # Iniciando o socket
+            server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            server.bind((HOST, PORT))
+            print("Servidor rodando...")
 
-if check is True: #Verificar
-    # server Quit
-    shutdown = False
+        except BaseException:
+            print ("Falha: verifique endereço e porta utilizados.")
 
-clientsList = []
-while True:
-    print("Esperando clientes...")
-    server.listen(5)
-    socket_client, socket_client_address = server.accept()
-    new_client_thread = ClientThread(socket_client_address, socket_client)
-    new_client_thread.start()
-    clientsList.append(new_client_thread)
+        self.clientsList = []
+        while True:
+            print("Esperando clientes...")
+
+            # Servidor preparado para receber clientes
+            server.listen(5)
+
+            # Servidor cadastrando novo cliente
+            socket_client, socket_client_address = server.accept()
+            # Criando thread para o novo cliente
+            new_client_thread = ClientThread(socket_client_address, socket_client, self)
+            new_client_thread.start()
+            # Adicionando o novo cliente na lista de clientes
+            self.clientsList.append(new_client_thread)
+            
+            print(f"Novo cliente conectado: {socket_client_address}")
+
+class ClientThread(threading.Thread):
+    def __init__(self, socketClientAddress, socketClient, server):
+        threading.Thread.__init__(self)
+        self.server = server
+        self.address = socketClientAddress
+        self.socketClient = socketClient
+        self.sessionKey = ""
+
+    def run(self):
+        print ("Aguardando chave pública do cliente...")
+        
+        # Recebendo chave pública do cliente
+        strClientPubKey = self.socketClient.recv(2048)
+
+        # Criando objeto de chave do cliente
+        clientPubKey = RSA.importKey(strClientPubKey)
+        clientCipher =  PKCS1_OAEP.new(clientPubKey)
+
+        # Hashing da chave pública para validação
+        hashObject = hashlib.sha1(strClientPubKey)
+        publicKeyHash = hashObject.hexdigest()
+
+        # Verificando se foi recebido uma chave não vazia
+        if strClientPubKey != "":
+            # Enviando confirmação
+            self.socketClient.sendall("YES".encode())
+            # Recebendo hash da chave pública do cliente
+            publicKeyHashRecv = self.socketClient.recv(1024)
+            publicKeyHashRecv = publicKeyHashRecv.decode()
+
+        # Verificando se o hash calculado e o hash recebido conferem
+        if publicKeyHash == publicKeyHashRecv:
+            # Criando chave de sessão
+            self.sessionKey = os.urandom(16)
+            # Criptografando chave de sessão
+            encryptSessionKey = clientCipher.encrypt(self.sessionKey)
+            # Enviando chave de sessão criptografada para o cliente
+            self.socketClient.sendall(encryptSessionKey)
+            # HANDSHAKE COMPLETE
+            while True:
+                thread_recv = threading.Thread(target=self.recvData)
+                thread_recv.start()
+                thread_recv.join()
+        else:
+            print ("Hash da chave pública não confere!")
+        
+        self.socketClient.close()
+
+    # Envia uma mensagem recebida no servidor para todos os clientes.
+    def sendMessage(self, message):
+        for clientThread in self.server.clientsList:
+            # Criando o objeto de criptografia com a chave de sessão relativa a cada cliente
+            aesCipherSession = AES.new(clientThread.sessionKey, AES.MODE_CFB)
+            # Criptografando a mensagem
+            encryptedMsg = aesCipherSession.encrypt(message)
+            
+            # Montando pacote com os dados para enviar
+            data = {"msg": encryptedMsg.decode("latin-1"), "iv": aesCipherSession.iv.decode("latin-1")}
+            # Enviando dados para o clinte
+            clientThread.socketClient.sendall(json.dumps(data).encode())
+
+    # Recebe dados dos clientes
+    def recvData(self):
+        while True:
+            # Recebendo dados do cliente, e separando
+            dataEncoded = self.socketClient.recv(1024)
+            data = json.loads(dataEncoded.decode())
+            msg = data["msg"].encode("latin-1")
+            iv = data["iv"].encode("latin-1")
+
+            # Descriptografando mensagem recebida
+            aesCipherSession = AES.new(self.sessionKey, AES.MODE_CFB,iv)
+            decriptedMsg = aesCipherSession.decrypt(msg)
+            
+            # Reencaminha a mensagem
+            self.sendMessage(decriptedMsg)
+
+if __name__ == "__main__":
+    # Recebendo a porta que será utilizada pelo servidor
+    # PORT = int(input("Port - > "))
+    Server()
+        
