@@ -92,7 +92,7 @@ class ClientThread(threading.Thread):
                 #thread_send.start()
                 thread_recv.start()
                 #thread_send.join()
-                #thread_recv.join()
+                thread_recv.join()
             self.socketClient.close()
         else:
             print ("\n-----PUBLIC KEY HASH DOESNOT MATCH-----\n")

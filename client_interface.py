@@ -1,5 +1,5 @@
 import tkinter as tk
-class Application(tk.Tk):
+class Interface():
     def __init__(self, master=None):
         self.fontePadrao = ("Arial", "10")
         self.primeiroContainer = tk.Frame(master)

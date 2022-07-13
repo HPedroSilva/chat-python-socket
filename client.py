@@ -5,10 +5,12 @@ import hashlib
 import itertools
 import json
 import sys
+import tkinter as tk
 from Crypto import Random
 import Crypto.Cipher.AES as AES
 import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
 from Crypto.PublicKey import RSA
+from client_interface import Interface
 
 #animating loading
 done = False
@@ -77,7 +79,9 @@ def recv(t,key):
         #decoded = newmess.decode("hex")
         en_recv = AES.new(key,AES.MODE_CFB,iv)
         dMsg = en_recv.decrypt(newmess)
-        print ("\n**New Message From Server**  " + time.ctime(time.time()) + " : " + str(dMsg) + "\n")
+        comp_dMsg = "**New Message From Server**  " + time.ctime(time.time()) + " : " + str(dMsg)
+        clientInterface.recvMsg(comp_dMsg)
+        print("\n" + comp_dMsg + "\n")
 
 server.sendall(public)
 confirm = server.recv(1024)
@@ -106,6 +110,9 @@ if confirm == "YES":
     thread_recv = threading.Thread(target=recv,args=("------Recieving Message------",decrypt))
     thread_send.start()
     thread_recv.start()
+    root = tk.Tk()
+    clientInterface = Interface(root)
+    root.mainloop()
     thread_send.join()
     thread_recv.join()
 
