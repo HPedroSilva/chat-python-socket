@@ -35,8 +35,12 @@ class Server():
             new_client_thread.start()
             # Adicionando o novo cliente na lista de clientes
             self.clientsList.append(new_client_thread)
-            
             print(f"Novo cliente conectado: {socket_client_address}")
+
+    # Função para remover um cliente que desconectou
+    def removeClient(self, client):
+        self.clientsList.remove(client)
+        print(f"Cliente {client.socketName} foi desconectado.")
 
 class ClientThread(threading.Thread):
     def __init__(self, socketClientAddress, socketClient, server):
@@ -44,14 +48,15 @@ class ClientThread(threading.Thread):
         self.server = server
         self.address = socketClientAddress
         self.socketClient = socketClient
+        self.socketName = socketClient.getpeername()
         self.sessionKey = ""
+        self.status = "Online"
 
     def run(self):
         print ("Aguardando chave pública do cliente...")
         
         # Recebendo chave pública do cliente
         strClientPubKey = self.socketClient.recv(2048)
-
         # Criando objeto de chave do cliente
         clientPubKey = RSA.importKey(strClientPubKey)
         clientCipher =  PKCS1_OAEP.new(clientPubKey)
@@ -77,14 +82,15 @@ class ClientThread(threading.Thread):
             # Enviando chave de sessão criptografada para o cliente
             self.socketClient.sendall(encryptSessionKey)
             # HANDSHAKE COMPLETE
-            while True:
-                thread_recv = threading.Thread(target=self.recvData)
-                thread_recv.start()
-                thread_recv.join()
+
+            # Iniciando a thread para recebimento de dados
+            thread_recv = threading.Thread(target=self.recvData)
+            thread_recv.start()
+            thread_recv.join()
         else:
             print ("Hash da chave pública não confere!")
         
-        self.socketClient.close()
+        self.socketClient.close()        
 
     # Envia uma mensagem recebida no servidor para todos os clientes.
     def sendMessage(self, message):
@@ -101,19 +107,26 @@ class ClientThread(threading.Thread):
 
     # Recebe dados dos clientes
     def recvData(self):
-        while True:
+        while self.status == "Online":
             # Recebendo dados do cliente, e separando
             dataEncoded = self.socketClient.recv(1024)
             data = json.loads(dataEncoded.decode())
-            msg = data["msg"].encode("latin-1")
-            iv = data["iv"].encode("latin-1")
+            quit = data.get("quit", "")
+            msg = data.get("msg", "").encode("latin-1")
+            iv = data.get("iv", "").encode("latin-1")
 
-            # Descriptografando mensagem recebida
-            aesCipherSession = AES.new(self.sessionKey, AES.MODE_CFB,iv)
-            decriptedMsg = aesCipherSession.decrypt(msg)
-            
-            # Reencaminha a mensagem
-            self.sendMessage(decriptedMsg)
+            if quit == "True":
+                self.socketClient.close()
+                self.status = "Offline"
+                self.server.removeClient(self)
+
+            else:
+                # Descriptografando mensagem recebida
+                aesCipherSession = AES.new(self.sessionKey, AES.MODE_CFB,iv)
+                decriptedMsg = aesCipherSession.decrypt(msg)
+                
+                # Reencaminha a mensagem
+                self.sendMessage(decriptedMsg)
 
 if __name__ == "__main__":
     # Recebendo a porta que será utilizada pelo servidor

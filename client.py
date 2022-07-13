@@ -1,4 +1,3 @@
-import time
 import socket
 import threading
 import hashlib
@@ -14,6 +13,10 @@ HOST = "127.0.0.1"
 PORT = 80
 class Client:
     def __init__(self):
+        self.status = "Online"
+        # Definição do formato dos dados de comunicação
+        self.data = {"quit": "False", "msg": "", "iv": ""}
+
         # Geração das chaves RSA
         random_generator = Random.new().read
         rsaKey = RSA.generate(1024, random_generator)
@@ -48,11 +51,25 @@ class Client:
             thread_recv.start()
 
             # Inicialização da interface do cliente
-            root = tk.Tk()
-            self.clientInterface = Interface(self, root)
-            root.mainloop()
+            self.myInterface()
             thread_recv.join()
 
+        self.server.close()
+
+    def myInterface(self):
+        self.root = tk.Tk()
+        self.clientInterface = Interface(self, self.root)
+        self.root.protocol("WM_DELETE_WINDOW", self.quit)
+        self.root.mainloop()
+
+    # Método para fechar a conexão
+    def quit(self):
+        dataSend = self.data
+        dataSend.update({"quit": "True"})
+        dataEncoded = json.dumps(dataSend).encode()
+        self.status = "Offline"
+        self.server.sendall(dataEncoded)
+        self.root.destroy()
         self.server.close()
     
     def send(self, msg):
@@ -61,26 +78,31 @@ class Client:
         encryptedMsg = aesCipher.encrypt(msg.encode())
         
         # Montando pacote com os dados para enviar
-        data = {"msg": encryptedMsg.decode("latin-1"), "iv": aesCipher.iv.decode("latin-1")}
-        dataEncoded = json.dumps(data).encode()
+        dataSend = self.data
+        dataSend.update({"msg": encryptedMsg.decode("latin-1"), "iv": aesCipher.iv.decode("latin-1")})
+        dataEncoded = json.dumps(dataSend).encode()
         
         # Enviando dados para o servidor
         self.server.sendall(dataEncoded)
 
     def recv(self):
-        while True:
+        while self.status == "Online":
             # Recebendo os dados do servidor, e separando
-            dataEncoded = self.server.recv(1024)
-            data = json.loads(dataEncoded.decode())
-            msg = data["msg"].encode("latin-1")
-            iv = data["iv"].encode("latin-1")
+            try:
+                dataEncoded = self.server.recv(1024)
+                data = json.loads(dataEncoded.decode())
+                msg = data.get("msg", "").encode("latin-1")
+                iv = data.get("iv", "").encode("latin-1")
 
-            # Descriptografando mensagem recebida
-            en_recv = AES.new(self.decryptedSessionKey, AES.MODE_CFB, iv)
-            decriptedMsg = en_recv.decrypt(msg)
-            
-            # Enviando mensagem para a interface
-            self.clientInterface.recvMsg(decriptedMsg)
+                # Descriptografando mensagem recebida
+                en_recv = AES.new(self.decryptedSessionKey, AES.MODE_CFB, iv)
+                decriptedMsg = en_recv.decrypt(msg)
+                
+                # Enviando mensagem para a interface
+                self.clientInterface.recvMsg(decriptedMsg)
+            except:
+                print("Erro ao receber dados do servidor.")
+                break
 
 if __name__ == "__main__":
     Client()

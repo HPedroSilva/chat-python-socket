@@ -44,6 +44,13 @@ class Interface():
         self.btnSend["command"] = self.sendMsg
         self.btnSend.pack()
 
+        self.btnQuit = tk.Button(self.primeiroContainer)
+        self.btnQuit["text"] = "Sair"
+        self.btnQuit["font"] = ("Calibri", "8")
+        self.btnQuit["width"] = 12
+        self.btnQuit["command"] = self.client.quit
+        self.btnQuit.pack()
+
         super().__init__()
 
     def recvMsg(self, msg):
@@ -55,3 +62,4 @@ class Interface():
         msg = self.msg.get()
         self.msg.delete(0, tk.END)
         self.client.send(msg)
+        
