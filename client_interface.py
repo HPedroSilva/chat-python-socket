@@ -53,9 +53,9 @@ class Interface():
 
         super().__init__()
 
-    def recvMsg(self, msg):
+    def recvMsg(self, sender, msg):
         self.displayText.configure(state='normal')
-        self.displayText.insert('end', "\n" + str(msg))
+        self.displayText.insert('end', f"\n{str(sender)}: {str(msg)}")
         self.displayText.configure(state='disabled')
 
     def sendMsg(self):

@@ -101,11 +101,11 @@ class ClientThread(threading.Thread):
             aesCipherSession = AES.new(clientThread.sessionKey, AES.MODE_CFB)
             # Criptografando a mensagem
             msg = {"sender": str(socketName), "text": message}
-            encryptedMsg = aesCipherSession.encrypt(json.dumps(msg))
+            encryptedMsg = aesCipherSession.encrypt(json.dumps(msg).encode())
 
             # Montando pacote com os dados para enviar
             dataSend = self.data
-            dataSend.update({"msg": msg.encryptedMsg.decode("latin-1"), "iv": aesCipherSession.iv.decode("latin-1")})
+            dataSend.update({"msg": encryptedMsg.decode("latin-1"), "iv": aesCipherSession.iv.decode("latin-1")})
             # Enviando dados para o clinte
             clientThread.socketClient.sendall(json.dumps(dataSend).encode())
 
@@ -127,10 +127,10 @@ class ClientThread(threading.Thread):
             else:
                 # Descriptografando mensagem recebida
                 aesCipherSession = AES.new(self.sessionKey, AES.MODE_CFB,iv)
-                decriptedMsg = json.loads(aesCipherSession.decrypt(msg))
+                decriptedMsg = json.loads(aesCipherSession.decrypt(msg).decode())
                 
                 # Reencaminha a mensagem
-                self.sendMessage(self.socketName, decriptedMsg)
+                self.sendMessage(decriptedMsg.get("sender", ""), decriptedMsg.get("text", ""))
 
 if __name__ == "__main__":
     # Recebendo a porta que será utilizada pelo servidor

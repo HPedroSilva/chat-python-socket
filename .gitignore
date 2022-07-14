@@ -1,3 +1,7 @@
 /virtualenv_chat
 test.bat
 __pycache__
+/build
+/dist
+client.spec
+server.spec
