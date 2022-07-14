@@ -15,7 +15,8 @@ class Client:
     def __init__(self):
         self.status = "Online"
         # Definição do formato dos dados de comunicação
-        self.data = {"quit": "False", "msg": "", "iv": ""}
+        self.data = {"quit": "False", "msg": {"sender": "", "text": ""}, "iv": ""}
+
 
         # Geração das chaves RSA
         random_generator = Random.new().read
@@ -99,7 +100,7 @@ class Client:
                 decriptedMsg = en_recv.decrypt(msg)
                 
                 # Enviando mensagem para a interface
-                self.clientInterface.recvMsg(decriptedMsg)
+                self.clientInterface.recvMsg(decriptedMsg.decode())
             except:
                 print("Erro ao receber dados do servidor.")
                 break

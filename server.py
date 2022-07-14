@@ -51,6 +51,8 @@ class ClientThread(threading.Thread):
         self.socketName = socketClient.getpeername()
         self.sessionKey = ""
         self.status = "Online"
+        # Definição do formato dos dados de comunicação
+        self.data = {"quit": "False", "msg": {"sender": "", "text": ""}, "iv": ""}
 
     def run(self):
         print ("Aguardando chave pública do cliente...")
@@ -93,17 +95,19 @@ class ClientThread(threading.Thread):
         self.socketClient.close()        
 
     # Envia uma mensagem recebida no servidor para todos os clientes.
-    def sendMessage(self, message):
+    def sendMessage(self, socketName, message):
         for clientThread in self.server.clientsList:
             # Criando o objeto de criptografia com a chave de sessão relativa a cada cliente
             aesCipherSession = AES.new(clientThread.sessionKey, AES.MODE_CFB)
             # Criptografando a mensagem
-            encryptedMsg = aesCipherSession.encrypt(message)
-            
+            msg = {"sender": str(socketName), "text": message}
+            encryptedMsg = aesCipherSession.encrypt(json.dumps(msg))
+
             # Montando pacote com os dados para enviar
-            data = {"msg": encryptedMsg.decode("latin-1"), "iv": aesCipherSession.iv.decode("latin-1")}
+            dataSend = self.data
+            dataSend.update({"msg": msg.encryptedMsg.decode("latin-1"), "iv": aesCipherSession.iv.decode("latin-1")})
             # Enviando dados para o clinte
-            clientThread.socketClient.sendall(json.dumps(data).encode())
+            clientThread.socketClient.sendall(json.dumps(dataSend).encode())
 
     # Recebe dados dos clientes
     def recvData(self):
@@ -123,10 +127,10 @@ class ClientThread(threading.Thread):
             else:
                 # Descriptografando mensagem recebida
                 aesCipherSession = AES.new(self.sessionKey, AES.MODE_CFB,iv)
-                decriptedMsg = aesCipherSession.decrypt(msg)
+                decriptedMsg = json.loads(aesCipherSession.decrypt(msg))
                 
                 # Reencaminha a mensagem
-                self.sendMessage(decriptedMsg)
+                self.sendMessage(self.socketName, decriptedMsg)
 
 if __name__ == "__main__":
     # Recebendo a porta que será utilizada pelo servidor
