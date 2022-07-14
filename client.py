@@ -60,6 +60,7 @@ class Client:
         self.root = tk.Tk()
         self.clientInterface = Interface(self, self.root)
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
+        self.root.bind('<Return>', self.clientInterface.sendMsg)
         self.root.mainloop()
 
     # Método para fechar a conexão
