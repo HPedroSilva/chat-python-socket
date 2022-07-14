@@ -1,4 +1,6 @@
 import tkinter as tk
+
+# Interface principal do cliente
 class Interface():
     def __init__(self, client, master=None):
         self.client = client
@@ -76,4 +78,72 @@ class Interface():
         nome = self.nome.get()
         self.msg.delete(0, tk.END)
         self.client.send(nome, msg)
+
+# Interface de formulário para porta e ip do servidor antes de abrir o cliente
+class FormInterface():
+    def __init__(self, client, master=None):
+        self.client = client
+        self.fontePadrao = ("Arial", "10")
+
+        self.primeiroContainer = tk.Frame(master)
+        self.primeiroContainer["pady"] = 10
+        self.primeiroContainer.pack()
+
+        self.segundoContainer = tk.Frame(master)
+        self.segundoContainer["padx"] = 20
+        self.segundoContainer.pack()
+
+        self.terceiroContainer = tk.Frame(master)
+        self.terceiroContainer["padx"] = 20
+        self.terceiroContainer.pack()
+
+        self.quartoContainer = tk.Frame(master)
+        self.quartoContainer["pady"] = 20
+        self.quartoContainer.pack()
+
+        # Label ip do servidor
+        self.ipLabel = tk.Label(self.primeiroContainer, text="IP do servidor:", font=self.fontePadrao)
+        self.ipLabel.pack(side=tk.LEFT)
+
+        # Campo de digitação de ip do servidor
+        self.ip = tk.Entry(self.primeiroContainer)
+        self.ip["width"] = 20
+        self.ip["font"] = self.fontePadrao
+        self.ip.pack(side=tk.LEFT)
+
+        # Label porta do servidor
+        self.portLabel = tk.Label(self.segundoContainer, text="Porta do servidor:", font=self.fontePadrao)
+        self.portLabel.pack(side=tk.LEFT)
+
+        # Campo de digitação da porta do servidor
+        self.port = tk.Entry(self.segundoContainer)
+        self.port["width"] = 20
+        self.port["font"] = self.fontePadrao
+        self.port.pack(side=tk.LEFT)
+
+        # Botão ok
+        self.btnOk = tk.Button(self.terceiroContainer)
+        self.btnOk["text"] = "Ok"
+        self.btnOk["font"] = ("Calibri", "8")
+        self.btnOk["width"] = 12
+        self.btnOk["command"] = self.send
+        self.btnOk.pack()
+
+        # Label de log
+        self.logLabel = tk.Label(self.quartoContainer, text="", font=self.fontePadrao)
+        self.logLabel.pack(side=tk.LEFT)
+
+        super().__init__()
+
+    def send(self):
+        if self.client.status == "Offline": 
+            ip = self.ip.get()
+            port = self.port.get()
+            # try:
+            port = int(port)
+            self.ip.configure(state="disabled")
+            self.port.configure(state="disabled")
+            self.client.startSocket(ip, port)
+            # except:
+                # self.logLabel.config(text="Insira um valor válido para a porta!")
         

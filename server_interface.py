@@ -13,7 +13,7 @@ class ServerInterface():
         self.segundoContainer.pack()
 
         self.terceiroContainer = tk.Frame(master)
-        self.terceiroContainer["padx"] = 20
+        self.terceiroContainer["padx"] = 200
         self.terceiroContainer.pack()
 
         # Label porta
@@ -45,7 +45,7 @@ class ServerInterface():
         self.btnQuit = tk.Button(self.terceiroContainer)
         self.btnQuit["text"] = "Encerrar Servidor"
         self.btnQuit["font"] = ("Calibri", "8")
-        self.btnQuit["width"] = 12
+        self.btnQuit["width"] = 20
         self.btnQuit["command"] = self.server.quit
         self.btnQuit.pack()
 

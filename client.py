@@ -7,49 +7,54 @@ from Crypto import Random
 import Crypto.Cipher.AES as AES
 import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
 from Crypto.PublicKey import RSA
-from client_interface import Interface
+from client_interface import Interface, FormInterface
 
-HOST = "127.0.0.1"
-PORT = 80
 class Client:
     def __init__(self):
-        self.status = "Online"
+        self.status = "Offline"
         # Definição do formato dos dados de comunicação
         self.data = {"quit": "False", "msg": {"sender": "", "text": ""}, "iv": ""}
+        self.host = "127.0.0.1"
+        self.port = 80
 
         # Geração das chaves RSA
         random_generator = Random.new().read
-        rsaKey = RSA.generate(1024, random_generator)
-        publicKey = rsaKey.publickey().exportKey()
-        privateKey = rsaKey.exportKey()
+        self.rsaKey = RSA.generate(1024, random_generator)
+        self.publicKey = self.rsaKey.publickey().exportKey()
+        privateKey = self.rsaKey.exportKey()
 
         # Hashing da chave pública
-        hashObject = hashlib.sha1(publicKey)
-        publicKeyHash = hashObject.hexdigest()
-
+        hashObject = hashlib.sha1(self.publicKey)
+        self.publicKeyHash = hashObject.hexdigest()
+        self.myFormInterface()
+        
+    def startSocket(self, ip, port):
+        self.host = ip
+        self.port = port
         try:
             # Iniciando o Socket
             self.server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            self.server.connect((HOST, PORT))
+            self.server.connect((self.host, self.port))
         
         except Exception as e:
             print(e)
             print("Erro na criação do socket. Verifique endereço e porta utilizados!")
         
         else:
+            self.status = "Online"
             # Cliente envia sua chave pública ao servidor para iniciar comunicação
-            self.server.sendall(publicKey)
+            self.server.sendall(self.publicKey)
             # Servidor envia confirmação
             confirm = self.server.recv(1024).decode()
             if confirm == "YES":
                 # Cliente envia hash da chave pública para confirmação do servidor
-                self.server.sendall(publicKeyHash.encode())
+                self.server.sendall(self.publicKeyHash.encode())
 
                 # Servidor envia chave de sessão criptografada
                 encryptedSessionKey = self.server.recv(1024)
 
                 # Descriptografando chave de sessão utilizando chave RSA
-                publicKeyCipher =  PKCS1_OAEP.new(rsaKey)
+                publicKeyCipher =  PKCS1_OAEP.new(self.rsaKey)
                 self.decryptedSessionKey = publicKeyCipher.decrypt(encryptedSessionKey)
 
                 # Inicialização da thread de recebimento de mensagens no cliente
@@ -57,10 +62,17 @@ class Client:
                 thread_recv.start()
 
                 # Inicialização da interface do cliente
+                self.rootForm.destroy()
                 self.myInterface()
                 thread_recv.join()
-
+            
+            self.status = "Offline"
             self.server.close()
+
+    def myFormInterface(self):
+        self.rootForm = tk.Tk()
+        self.clientFormInterface = FormInterface(self, self.rootForm)
+        self.rootForm.mainloop()
 
     def myInterface(self):
         self.root = tk.Tk()
