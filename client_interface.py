@@ -135,15 +135,16 @@ class FormInterface():
 
         super().__init__()
 
+    # Método para enviar ip e porta inseridos para ser realizada a conexão
     def send(self):
         if self.client.status == "Offline": 
             ip = self.ip.get()
             port = self.port.get()
-            # try:
-            port = int(port)
-            self.ip.configure(state="disabled")
-            self.port.configure(state="disabled")
-            self.client.startSocket(ip, port)
-            # except:
-                # self.logLabel.config(text="Insira um valor válido para a porta!")
+            try:
+                port = int(port)
+                self.ip.configure(state="disabled")
+                self.port.configure(state="disabled")
+                self.client.startSocket(ip, port)
+            except:
+                self.logLabel.config(text="Insira um valor válido para a porta!")
         

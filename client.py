@@ -69,11 +69,13 @@ class Client:
             self.status = "Offline"
             self.server.close()
 
+    # Método que chama a interface de inserir ip e porta do servidor
     def myFormInterface(self):
         self.rootForm = tk.Tk()
         self.clientFormInterface = FormInterface(self, self.rootForm)
         self.rootForm.mainloop()
 
+    # Método que chama a interface principal do cliente
     def myInterface(self):
         self.root = tk.Tk()
         self.clientInterface = Interface(self, self.root)
@@ -91,6 +93,7 @@ class Client:
         self.root.destroy()
         self.server.close()
     
+    # Método para enviar mensagens para o servidor
     def send(self, sender, message):
         senderName = sender if sender else self.server.getsockname()
         # Criptografando a mensagem com a chave de sessão
@@ -106,6 +109,7 @@ class Client:
         # Enviando dados para o servidor
         self.server.sendall(dataEncoded)
 
+    # Método para receber mensagens do servidor
     def recv(self):
         while self.status == "Online":
             # Recebendo os dados do servidor, e separando
