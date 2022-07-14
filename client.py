@@ -27,40 +27,45 @@ class Client:
         hashObject = hashlib.sha1(publicKey)
         publicKeyHash = hashObject.hexdigest()
 
-        # Iniciando o Socket
-        self.server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.server.connect((HOST, PORT))
+        try:
+            # Iniciando o Socket
+            self.server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            self.server.connect((HOST, PORT))
+        
+        except:
+            print("Erro na criação do socket. Verifique endereço e porta utilizados!")
+        
+        else:
+            # Cliente envia sua chave pública ao servidor para iniciar comunicação
+            self.server.sendall(publicKey)
+            # Servidor envia confirmação
+            confirm = self.server.recv(1024).decode()
+            if confirm == "YES":
+                # Cliente envia hash da chave pública para confirmação do servidor
+                self.server.sendall(publicKeyHash.encode())
 
-        # Cliente envia sua chave pública ao servidor para iniciar comunicação
-        self.server.sendall(publicKey)
-        # Servidor envia confirmação
-        confirm = self.server.recv(1024).decode()
-        if confirm == "YES":
-            # Cliente envia hash da chave pública para confirmação do servidor
-            self.server.sendall(publicKeyHash.encode())
+                # Servidor envia chave de sessão criptografada
+                encryptedSessionKey = self.server.recv(1024)
 
-            # Servidor envia chave de sessão criptografada
-            encryptedSessionKey = self.server.recv(1024)
+                # Descriptografando chave de sessão utilizando chave RSA
+                publicKeyCipher =  PKCS1_OAEP.new(rsaKey)
+                self.decryptedSessionKey = publicKeyCipher.decrypt(encryptedSessionKey)
 
-            # Descriptografando chave de sessão utilizando chave RSA
-            publicKeyCipher =  PKCS1_OAEP.new(rsaKey)
-            self.decryptedSessionKey = publicKeyCipher.decrypt(encryptedSessionKey)
+                # Inicialização da thread de recebimento de mensagens no cliente
+                thread_recv = threading.Thread(target=self.recv)
+                thread_recv.start()
 
-            # Inicialização da thread de recebimento de mensagens no cliente
-            thread_recv = threading.Thread(target=self.recv)
-            thread_recv.start()
+                # Inicialização da interface do cliente
+                self.myInterface()
+                thread_recv.join()
 
-            # Inicialização da interface do cliente
-            self.myInterface()
-            thread_recv.join()
-
-        self.server.close()
+            self.server.close()
 
     def myInterface(self):
         self.root = tk.Tk()
         self.clientInterface = Interface(self, self.root)
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
-        self.root.bind('<Return>', self.clientInterface.sendMsg)
+        self.root.bind('<Return>', self.clientInterface.sendMsgEnter)
         self.root.mainloop()
 
     # Método para fechar a conexão

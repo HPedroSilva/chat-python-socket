@@ -68,7 +68,10 @@ class Interface():
         self.displayText.insert('end', f"\n{str(sender)}: {str(msg)}")
         self.displayText.configure(state='disabled')
 
-    def sendMsg(self, event):
+    def sendMsgEnter(self, event):
+        self.sendMsg()
+
+    def sendMsg(self):
         msg = self.msg.get()
         nome = self.nome.get()
         self.msg.delete(0, tk.END)

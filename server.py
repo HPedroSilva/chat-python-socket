@@ -25,17 +25,20 @@ class Server():
         while True:
             print("Esperando clientes...")
 
-            # Servidor preparado para receber clientes
-            server.listen(5)
-
-            # Servidor cadastrando novo cliente
-            socket_client, socket_client_address = server.accept()
-            # Criando thread para o novo cliente
-            new_client_thread = ClientThread(socket_client_address, socket_client, self)
-            new_client_thread.start()
-            # Adicionando o novo cliente na lista de clientes
-            self.clientsList.append(new_client_thread)
-            print(f"Novo cliente conectado: {socket_client_address}")
+            try:
+                # Servidor preparado para receber clientes
+                server.listen(5)
+                # Servidor cadastrando novo cliente
+                socket_client, socket_client_address = server.accept()
+                # Criando thread para o novo cliente
+                new_client_thread = ClientThread(socket_client_address, socket_client, self)
+                new_client_thread.start()
+            except:
+                print("Falha no cadastro do novo cliente.")
+            else:
+                # Adicionando o novo cliente na lista de clientes
+                self.clientsList.append(new_client_thread)
+                print(f"Novo cliente conectado: {socket_client_address}")
 
     # Função para remover um cliente que desconectou
     def removeClient(self, client):
