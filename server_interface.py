@@ -59,6 +59,10 @@ class ServerInterface():
     def sendPort(self):
         if self.server.status == "Offline": 
             port = self.port.get()
-            self.port.configure(state="disabled")
-            self.server.startSocket(port)
+            try:
+                port = int(port)
+                self.port.configure(state="disabled")
+                self.server.startSocket(port)
+            except:
+                self.recvMsg("Insira um valor válido para a porta!")
         

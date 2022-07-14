@@ -75,11 +75,11 @@ class Server():
             dataSend = self.data
             dataSend.update({"quit": "True"})
             dataEncoded = json.dumps(dataSend).encode()
-            self.status = "Offline"
             for clientThread in self.clientsList:
                 clientThread.socketClient.sendall(dataEncoded)
                 clientThread.socketClient.close()
             
+        self.status = "Offline"
         self.root.destroy()
 
 class ClientThread(threading.Thread):
