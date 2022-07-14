@@ -32,7 +32,8 @@ class Client:
             self.server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             self.server.connect((HOST, PORT))
         
-        except:
+        except Exception as e:
+            print(e)
             print("Erro na criação do socket. Verifique endereço e porta utilizados!")
         
         else:
@@ -99,15 +100,21 @@ class Client:
             try:
                 dataEncoded = self.server.recv(1024)
                 data = json.loads(dataEncoded.decode())
+                quit = data.get("quit", "")
                 msg = data.get("msg", "").encode("latin-1")
                 iv = data.get("iv", "").encode("latin-1")
 
-                # Descriptografando mensagem recebida
-                aesCipherSession = AES.new(self.decryptedSessionKey, AES.MODE_CFB, iv)
-                decriptedMsg = json.loads(aesCipherSession.decrypt(msg).decode())
-                
-                # Enviando mensagem para a interface
-                self.clientInterface.recvMsg(decriptedMsg.get("sender", ""), decriptedMsg.get("text", ""))
+                if quit == "True":
+                    self.socketClient.close()
+                    self.status = "Offline"
+                    self.server.removeClient(self)
+                else:
+                    # Descriptografando mensagem recebida
+                    aesCipherSession = AES.new(self.decryptedSessionKey, AES.MODE_CFB, iv)
+                    decriptedMsg = json.loads(aesCipherSession.decrypt(msg).decode())
+                    
+                    # Enviando mensagem para a interface
+                    self.clientInterface.recvMsg(decriptedMsg.get("sender", ""), decriptedMsg.get("text", ""))
             except:
                 print("Erro ao receber dados do servidor.")
                 break

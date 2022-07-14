@@ -3,47 +3,81 @@ import hashlib
 import os
 import threading
 import json
+import tkinter as tk
 import Crypto.Cipher.AES as AES
 import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
 from Crypto.PublicKey import RSA
+from server_interface import ServerInterface
 
 HOST = "127.0.0.1"
 PORT = 80
 
 class Server():
     def __init__(self):
+        self.data = {"quit": "False", "msg": {"sender": "", "text": ""}, "iv": ""}
         try:
             # Iniciando o socket
-            server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            server.bind((HOST, PORT))
-            print("Servidor rodando...")
+            self.serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            self.serverSocket.bind((HOST, PORT))
 
         except BaseException:
             print ("Falha: verifique endereço e porta utilizados.")
 
-        self.clientsList = []
-        while True:
+        else:
+            self.status = "Online"
+            self.clientsList = []
+            print("Servidor rodando...")
+            
+            # Inicialização da thread de recebimento de clientes
+            thread_recv = threading.Thread(target=self.newClients)
+            thread_recv.start()
+
+            # Inicialização da interface do cliente
+            self.myInterface()
+            thread_recv.join()
+    
+    def newClients(self):
+        while self.status == "Online":
             print("Esperando clientes...")
 
             try:
                 # Servidor preparado para receber clientes
-                server.listen(5)
+                self.serverSocket.listen(5)
                 # Servidor cadastrando novo cliente
-                socket_client, socket_client_address = server.accept()
+                socket_client, socket_client_address = self.serverSocket.accept()
                 # Criando thread para o novo cliente
                 new_client_thread = ClientThread(socket_client_address, socket_client, self)
                 new_client_thread.start()
-            except:
+            except Exception as e:
+                print(e)
                 print("Falha no cadastro do novo cliente.")
             else:
                 # Adicionando o novo cliente na lista de clientes
                 self.clientsList.append(new_client_thread)
                 print(f"Novo cliente conectado: {socket_client_address}")
 
+    def myInterface(self):
+        self.root = tk.Tk()
+        self.serverInterface = ServerInterface(self, self.root)
+        self.root.protocol("WM_DELETE_WINDOW", self.quit)
+        self.root.mainloop()
+
     # Função para remover um cliente que desconectou
     def removeClient(self, client):
         self.clientsList.remove(client)
         print(f"Cliente {client.socketName} foi desconectado.")
+    
+    # Método para encerrar o servidor
+    def quit(self):
+        dataSend = self.data
+        dataSend.update({"quit": "True"})
+        dataEncoded = json.dumps(dataSend).encode()
+        self.status = "Offline"
+        for clientThread in self.clientsList:
+            clientThread.socketClient.sendall(dataEncoded)
+            clientThread.socketClient.close()
+            
+        self.root.destroy()
 
 class ClientThread(threading.Thread):
     def __init__(self, socketClientAddress, socketClient, server):
@@ -109,7 +143,7 @@ class ClientThread(threading.Thread):
             # Montando pacote com os dados para enviar
             dataSend = self.data
             dataSend.update({"msg": encryptedMsg.decode("latin-1"), "iv": aesCipherSession.iv.decode("latin-1")})
-            # Enviando dados para o clinte
+            # Enviando dados para o cliente
             clientThread.socketClient.sendall(json.dumps(dataSend).encode())
 
     # Recebe dados dos clientes
