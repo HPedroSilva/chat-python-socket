@@ -8,38 +8,38 @@ import Crypto.Cipher.AES as AES
 import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from server_interface import ServerInterface
-
-HOST = "127.0.0.1"
-PORT = 80
-
 class Server():
     def __init__(self):
         self.data = {"quit": "False", "msg": {"sender": "", "text": ""}, "iv": ""}
+        self.host = "127.0.0.1"
+        self.port = 80
+        self.clientsList = []
+        self.status = "Offline"
+
+        # Inicialização da interface do cliente
+        self.myInterface()
+
+    def startSocket(self, port):
         try:
             # Iniciando o socket
-            self.serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            self.serverSocket.bind((HOST, PORT))
+            self.port = int(port)
+            self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.serverSocket.bind((self.host, self.port))
 
-        except BaseException:
-            print ("Falha: verifique endereço e porta utilizados.")
+        except BaseException as e:
+            print(e)
+            self.serverInterface.recvMsg("Falha: verifique endereço e porta utilizados.")
 
-        else:
-            self.status = "Online"
-            self.clientsList = []
-            print("Servidor rodando...")
-            
+        else:            
             # Inicialização da thread de recebimento de clientes
+            self.status = "Online"
             thread_recv = threading.Thread(target=self.newClients)
             thread_recv.start()
-
-            # Inicialização da interface do cliente
-            self.myInterface()
-            thread_recv.join()
+            self.serverInterface.recvMsg("Servidor rodando...")
     
     def newClients(self):
         while self.status == "Online":
-            print("Esperando clientes...")
-
+            self.serverInterface.recvMsg("Esperando clientes...")
             try:
                 # Servidor preparado para receber clientes
                 self.serverSocket.listen(5)
@@ -49,13 +49,15 @@ class Server():
                 new_client_thread = ClientThread(socket_client_address, socket_client, self)
                 new_client_thread.start()
             except Exception as e:
-                print(e)
-                print("Falha no cadastro do novo cliente.")
+                self.serverInterface.recvMsg(str(e))
+                self.serverInterface.recvMsg("Falha no cadastro do novo cliente.")
             else:
                 # Adicionando o novo cliente na lista de clientes
                 self.clientsList.append(new_client_thread)
-                print(f"Novo cliente conectado: {socket_client_address}")
+                self.serverInterface.recvMsg(f"Novo cliente conectado: {socket_client_address}")
+        self.quit()
 
+    # Método que chama a interface do servidor
     def myInterface(self):
         self.root = tk.Tk()
         self.serverInterface = ServerInterface(self, self.root)
@@ -65,17 +67,18 @@ class Server():
     # Função para remover um cliente que desconectou
     def removeClient(self, client):
         self.clientsList.remove(client)
-        print(f"Cliente {client.socketName} foi desconectado.")
+        self.serverInterface.recvMsg(f"Cliente {client.socketName} foi desconectado.")
     
     # Método para encerrar o servidor
     def quit(self):
-        dataSend = self.data
-        dataSend.update({"quit": "True"})
-        dataEncoded = json.dumps(dataSend).encode()
-        self.status = "Offline"
-        for clientThread in self.clientsList:
-            clientThread.socketClient.sendall(dataEncoded)
-            clientThread.socketClient.close()
+        if len(self.clientsList):
+            dataSend = self.data
+            dataSend.update({"quit": "True"})
+            dataEncoded = json.dumps(dataSend).encode()
+            self.status = "Offline"
+            for clientThread in self.clientsList:
+                clientThread.socketClient.sendall(dataEncoded)
+                clientThread.socketClient.close()
             
         self.root.destroy()
 
@@ -92,7 +95,7 @@ class ClientThread(threading.Thread):
         self.data = {"quit": "False", "msg": {"sender": "", "text": ""}, "iv": ""}
 
     def run(self):
-        print ("Aguardando chave pública do cliente...")
+        self.server.serverInterface.recvMsg("Aguardando chave pública do cliente...")
         
         # Recebendo chave pública do cliente
         strClientPubKey = self.socketClient.recv(2048)
@@ -127,7 +130,7 @@ class ClientThread(threading.Thread):
             thread_recv.start()
             thread_recv.join()
         else:
-            print ("Hash da chave pública não confere!")
+            self.server.serverInterface.recvMsg("Hash da chave pública não confere!")
         
         self.socketClient.close()        
 
