@@ -20,19 +20,29 @@ class Interface():
         self.quartoContainer["pady"] = 20
         self.quartoContainer.pack()
 
+        # Label do nome
+        self.nomeLabel = tk.Label(self.primeiroContainer, text="Seu nome:", font=self.fontePadrao)
+        self.nomeLabel.pack(side=tk.LEFT)
+
+        # Campo de digitação de nome
+        self.nome = tk.Entry(self.primeiroContainer)
+        self.nome["width"] = 30
+        self.nome["font"] = self.fontePadrao
+        self.nome.pack(side=tk.LEFT)
+
         # Quadro que mostra as mensagens
         self.displayText = tk.Text(self.segundoContainer)
-        self.displayText["width"] = 30
+        self.displayText["width"] = 90
         self.displayText["font"] = self.fontePadrao
         self.displayText.pack(side=tk.LEFT)
         self.displayText.configure(state='disabled')
 
-        self.msgLabel = tk.Label(self.terceiroContainer, text="Mensagem:", font=self.fontePadrao)
+        self.msgLabel = tk.Label(self.quartoContainer, text="Mensagem:", font=self.fontePadrao)
         self.msgLabel.pack(side=tk.LEFT)
 
         # Campo de digitação da mensagem
-        self.msg = tk.Entry(self.terceiroContainer)
-        self.msg["width"] = 30
+        self.msg = tk.Entry(self.quartoContainer)
+        self.msg["width"] = 70
         self.msg["font"] = self.fontePadrao
         self.msg.pack(side=tk.LEFT)
 
@@ -60,6 +70,7 @@ class Interface():
 
     def sendMsg(self, event):
         msg = self.msg.get()
+        nome = self.nome.get()
         self.msg.delete(0, tk.END)
-        self.client.send(msg)
+        self.client.send(nome, msg)
         

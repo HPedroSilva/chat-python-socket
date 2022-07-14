@@ -5,3 +5,4 @@ __pycache__
 /dist
 client.spec
 server.spec
+testInterface.py

@@ -73,10 +73,11 @@ class Client:
         self.root.destroy()
         self.server.close()
     
-    def send(self, message):
+    def send(self, sender, message):
+        senderName = sender if sender else self.server.getsockname()
         # Criptografando a mensagem com a chave de sessão
         aesCipher = AES.new(self.decryptedSessionKey,AES.MODE_CFB)
-        msg = {"sender": self.server.getsockname(), "text": message}
+        msg = {"sender": senderName, "text": message}
         encryptedMsg = aesCipher.encrypt(json.dumps(msg).encode())
         
         # Montando pacote com os dados para enviar
