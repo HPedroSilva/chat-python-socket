@@ -11,7 +11,7 @@ from server_interface import ServerInterface
 class Server():
     def __init__(self):
         self.data = {"quit": "False", "msg": {"sender": "", "text": ""}, "iv": ""}
-        self.host = "127.0.0.1"
+        self.host = "0.0.0.0"
         self.port = 80
         self.clientsList = []
         self.status = "Offline"
